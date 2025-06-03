@@ -3,6 +3,8 @@ using UnityEngine.InputSystem;
 public class PlayerController : MonoBehaviour
 {
     private Rigidbody2D rb;
+    private Animator animator;
+
     [Header("Movement")]
     public float moveSpeed = 10f;
     float horizontalMovement;
@@ -26,18 +28,39 @@ public class PlayerController : MonoBehaviour
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
+        animator = GetComponent<Animator>();
     }
 
     void Update()
     {
         rb.linearVelocity = new Vector2(horizontalMovement * moveSpeed, rb.linearVelocity.y);
+        FlipSprite();
         GroundCheck();
         Gravity();
     }
 
+    void FixedUpdate()
+    {
+        animator.SetFloat("xVelocity", Mathf.Abs(rb.linearVelocity.x));
+        animator.SetFloat("yVelocity", rb.linearVelocity.y);
+    }
+
+    void FlipSprite()
+    {
+        if (horizontalMovement > 0 && transform.localScale.x < 0)
+        {
+            transform.localScale = new Vector3(1, 1, 1);
+        }
+        else if (horizontalMovement < 0 && transform.localScale.x > 0)
+        {
+            transform.localScale = new Vector3(-1, 1, 1);
+        }
+    }
+
+
     private void Gravity()
     {
-        if(rb.linearVelocity.y < 0)
+        if (rb.linearVelocity.y < 0)
         {
             rb.gravityScale = baseGravity * fallMultiplier;
             rb.linearVelocity = new Vector2(rb.linearVelocity.x, Mathf.Max(rb.linearVelocity.y, -maxFallSpeed));
@@ -61,11 +84,13 @@ public class PlayerController : MonoBehaviour
             {
                 rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
                 remainingJumps--;
+                animator.SetBool("isJumping", true);
             }
             else if (context.canceled)
             {
                 rb.linearVelocity = new Vector2(rb.linearVelocity.x, rb.linearVelocity.y * 0.5f);
                 remainingJumps--;
+                animator.SetBool("isJumping", false);
             }
         }
 
@@ -76,7 +101,9 @@ public class PlayerController : MonoBehaviour
         if (Physics2D.OverlapBox(groundCheckPos.position, groundCheckSize, 0, groundLayer))
         {
             remainingJumps = maxJumpCount;
+            animator.SetBool("isJumping", false);
         }
+
     }
 
     private void OnDrawGizmosSelected()
