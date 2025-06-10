@@ -4,6 +4,7 @@ public class PlayerController : MonoBehaviour
 {
     private Rigidbody2D rb;
     private Animator animator;
+    private AudioSource audioSource;
 
     [Header("Movement")]
     public float moveSpeed = 10f;
@@ -11,7 +12,7 @@ public class PlayerController : MonoBehaviour
 
     [Header("Jumping")]
     public float jumpForce = 10f;
-    public int maxJumpCount = 2;
+    public int maxJumpCount = 1;
     int remainingJumps;
 
 
@@ -29,6 +30,7 @@ public class PlayerController : MonoBehaviour
     {
         rb = GetComponent<Rigidbody2D>();
         animator = GetComponent<Animator>();
+        audioSource = GetComponent<AudioSource>();
     }
 
     void Update()
@@ -37,12 +39,29 @@ public class PlayerController : MonoBehaviour
         FlipSprite();
         GroundCheck();
         Gravity();
+        PlayWalkingSound();
     }
 
     void FixedUpdate()
     {
         animator.SetFloat("xVelocity", Mathf.Abs(rb.linearVelocity.x));
         animator.SetFloat("yVelocity", rb.linearVelocity.y);
+    }
+
+    private void PlayWalkingSound()
+    {
+        if (Mathf.Abs(horizontalMovement) > 0 && Physics2D.OverlapBox(groundCheckPos.position, groundCheckSize, 0, groundLayer))
+        {
+            if (!audioSource.isPlaying) // Prevent overlapping sounds
+            {
+                audioSource.pitch = Random.Range(1f, 1.5f);
+                audioSource.Play();
+            }
+        }
+        else
+        {
+            audioSource.Stop(); // Stop the sound if the player is not walking or grounded
+        }
     }
 
     void FlipSprite()
@@ -90,7 +109,7 @@ public class PlayerController : MonoBehaviour
             {
                 rb.linearVelocity = new Vector2(rb.linearVelocity.x, rb.linearVelocity.y * 0.5f);
                 remainingJumps--;
-                animator.SetBool("isJumping", false);
+                animator.SetBool("isJumping", true);
             }
         }
 
@@ -98,11 +117,12 @@ public class PlayerController : MonoBehaviour
 
     private void GroundCheck()
     {
-        if (Physics2D.OverlapBox(groundCheckPos.position, groundCheckSize, 0, groundLayer))
+        if (Physics2D.OverlapBox(groundCheckPos.position, groundCheckSize, 0, groundLayer) && Mathf.Abs(rb.linearVelocity.y) < 0.1f) // Make sure that the player stop moving vertically first
         {
             remainingJumps = maxJumpCount;
             animator.SetBool("isJumping", false);
         }
+
 
     }
 
